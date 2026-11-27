@@ -1,0 +1,27 @@
+# HTTPS automático (Let's Encrypt). {$DOMAIN} vem do .env.production.
+# O Caddy SOBRESCREVE o X-Forwarded-For com o IP real do visitante
+# (por isso TRUSTED_PROXY_HOPS=1 é seguro e o rate limit não pode ser burlado).
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Corpo máximo (fotos de até 4 × 6 MB por envio no painel)
+	request_body {
+		max_size 30MB
+	}
+
+	reverse_proxy app:3000 {
+		health_uri /api/health
+		health_interval 30s
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
+
+# Se o domínio também tiver "www" no DNS, tire o "#" das 3 linhas abaixo
+# para mandar o visitante ao endereço principal:
+# www.{$DOMAIN} {
+# 	redir https://{$DOMAIN}{uri} permanent
+# }

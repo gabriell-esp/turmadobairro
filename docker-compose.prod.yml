@@ -1,0 +1,92 @@
+# Produção: site + banco + HTTPS automático (Caddy).
+#   docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+# Passo a passo completo em DEPLOY.md
+name: turmadobairro-prod
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: turma
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env.production}
+      POSTGRES_DB: turmadobairro
+    # SEM "ports": o banco só é acessível pela rede interna do Docker
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U turma -d turmadobairro"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [internal]
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env.production
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://turma:${POSTGRES_PASSWORD}@db:5432/turmadobairro?schema=public
+      UPLOAD_DIR: /app/storage/uploads
+      # Quantos proxies confiáveis ficam na frente do app: 1 = só o Caddy.
+      # Com Cloudflare na frente do Caddy use 2 (defina TRUSTED_PROXY_HOPS=2 no .env.production).
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
+    volumes:
+      - uploads:/app/storage/uploads
+    # SEM "ports": só o Caddy conversa com o app
+    networks: [internal]
+
+  # Tarefa agendada (a cada 5 min): concilia pagamentos, expira reservas, reenvia WhatsApp, limpa sessões.
+  cron:
+    image: curlimages/curl:8.10.1
+    restart: unless-stopped
+    depends_on: [app]
+    environment:
+      CRON_SECRET: ${CRON_SECRET:?defina CRON_SECRET no .env.production}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - 'while true; do sleep 300; curl -fsS -m 55 -X POST -H "Authorization: Bearer $$CRON_SECRET" http://app:3000/api/cron || echo "[cron] falhou"; echo; done'
+    networks: [internal]
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [app]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?defina DOMAIN no .env.production}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [internal]
+
+  # OPCIONAL (WhatsApp): docker compose --profile whatsapp ... up -d
+  # Documentação: https://github.com/wppconnect-team/wppconnect-server
+  # Rede interna: use WPP_BASE_URL=http://wppconnect:21465 no .env.production
+  wppconnect:
+    image: wppconnect/server-cli:latest
+    profiles: ["whatsapp"]
+    restart: unless-stopped
+    volumes:
+      - wppdata:/usr/src/wpp-server/userDataDir
+      - wpptokens:/usr/src/wpp-server/tokens
+    networks: [internal]
+
+networks:
+  internal:
+
+volumes:
+  pgdata:
+  uploads:
+  caddy_data:
+  caddy_config:
+  wppdata:
+  wpptokens:

@@ -1,0 +1,6 @@
+# Arquivos de texto sempre com final de linha LF (scripts .sh e Dockerfile quebram com CRLF no Linux)
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.webp binary
+*.ico binary

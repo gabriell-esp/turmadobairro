@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: turma
+      POSTGRES_PASSWORD: turma_dev_pw
+      POSTGRES_DB: turmadobairro
+    ports:
+      - "55432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # OPCIONAL: servidor WPPConnect (WhatsApp). Em produção costuma rodar em outro host.
+  # Documentação: https://github.com/wppconnect-team/wppconnect-server
+  # Depois de subir, defina WPP_BASE_URL e WPP_SECRET_KEY no .env e conecte o número pelo painel (Admin > WhatsApp).
+  wppconnect:
+    image: wppconnect/server-cli:latest
+    profiles: ["whatsapp"]
+    restart: unless-stopped
+    ports:
+      - "21465:21465"
+    volumes:
+      - wppdata:/usr/src/wpp-server/userDataDir
+      - wpptokens:/usr/src/wpp-server/tokens
+
+volumes:
+  pgdata:
+  wppdata:
+  wpptokens:

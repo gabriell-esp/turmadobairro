@@ -1,0 +1,400 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  MEMBER
+  SELLER
+  ORGANIZER
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  CANCELLED
+  EXPIRED
+  REFUNDED
+}
+
+enum OrderSource {
+  ONLINE
+  SELLER
+}
+
+enum MessageStatus {
+  QUEUED
+  SENT
+  FAILED
+}
+
+enum ConsentType {
+  PRIVACY_POLICY
+  TERMS
+  MARKETING
+  GUARDIAN
+}
+
+enum DataRequestType {
+  ACCESS
+  EXPORT
+  CORRECTION
+  DELETION
+  OTHER
+}
+
+enum DataRequestStatus {
+  OPEN
+  DONE
+  REJECTED
+}
+
+// ───────────────────────── Pessoas ─────────────────────────
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String
+  name            String
+  role            Role      @default(MEMBER)
+  phone           String?
+  cpfEnc          String? // AES-256-GCM
+  cpfHash         String?   @unique // HMAC-SHA256 (índice cego)
+  birthDate       DateTime? @db.Date
+  city            String?
+  nickname        String?
+  memberSinceYear Int? // ano em que começou a participar do bloco
+  marketingOptIn  Boolean   @default(false)
+  active          Boolean   @default(true)
+  failedLogins    Int       @default(0)
+  lockedUntil     DateTime?
+  lastLoginAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  sessions       Session[]
+  resets         PasswordReset[]
+  consents       ConsentLog[]
+  cart           Cart?
+  orders         Order[]         @relation("OrderBuyer")
+  sales          Order[]         @relation("OrderSeller")
+  dataRequests   DataRequest[]
+  paymentLinks   PaymentLink[]
+  deliveredItems OrderItem[]     @relation("ItemDeliveredBy")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ConsentLog {
+  id        String      @id @default(cuid())
+  userId    String?
+  type      ConsentType
+  version   String
+  granted   Boolean
+  ip        String?
+  userAgent String?
+  createdAt DateTime    @default(now())
+  user      User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, type])
+}
+
+model DataRequest {
+  id         String            @id @default(cuid())
+  userId     String?
+  contact    String?
+  type       DataRequestType
+  status     DataRequestStatus @default(OPEN)
+  message    String?
+  response   String?
+  createdAt  DateTime          @default(now())
+  resolvedAt DateTime?
+  user       User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+}
+
+model RateLimit {
+  key      String   @id
+  count    Int
+  resetAt  DateTime
+
+  @@index([resetAt])
+}
+
+// ───────────────────────── Evento e programação ─────────────────────────
+
+model Event {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  year        Int
+  startsAt    DateTime
+  endsAt      DateTime
+  city        String   @default("Ipira - SC")
+  location    String?
+  description String?
+  pickupInfo  String? // como/onde retirar o abadá
+  published   Boolean  @default(true)
+  isCurrent   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  schedule ScheduleItem[]
+  products Product[]
+  orders   Order[]
+  items    OrderItem[]
+}
+
+model ScheduleItem {
+  id          String    @id @default(cuid())
+  eventId     String
+  startsAt    DateTime
+  endsAt      DateTime?
+  title       String
+  description String?
+  location    String?
+  category    String    @default("festa")
+  published   Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  event       Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, startsAt])
+}
+
+model GalleryImage {
+  id        String   @id @default(cuid())
+  url       String
+  caption   String?
+  year      Int?
+  published Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model Setting {
+  key   String @id
+  value String
+}
+
+// ───────────────────────── Loja ─────────────────────────
+
+model Product {
+  id            String    @id @default(cuid())
+  eventId       String
+  slug          String    @unique
+  name          String
+  description   String?
+  priceCents    Int
+  imageUrl      String?
+  shirtColor    String? // cor principal da ilustração do abadá (#rrggbb), quando não há foto
+  stripeColor   String? // cor da faixa da ilustração (#rrggbb)
+  lotName       String? // ex.: "1º lote"
+  stock         Int? // null = ilimitado
+  sizes         String[]
+  allowBabyLook Boolean   @default(true)
+  maxPerOrder   Int       @default(10)
+  active        Boolean   @default(true)
+  saleStartsAt  DateTime?
+  saleEndsAt    DateTime?
+  sortOrder     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  event         Event     @relation(fields: [eventId], references: [id])
+
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  updatedAt DateTime   @updatedAt
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+}
+
+model CartItem {
+  id             String   @id @default(cuid())
+  cartId         String
+  productId      String
+  ownerName      String
+  ownerNameKey   String
+  ownerCpfEnc    String
+  ownerCpfHash   String
+  ownerBirthDate DateTime @db.Date
+  size           String
+  babyLook       Boolean  @default(false)
+  guardianName   String?
+  createdAt      DateTime @default(now())
+  cart           Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product        Product  @relation(fields: [productId], references: [id])
+
+  @@unique([cartId, ownerCpfHash])
+  @@unique([cartId, ownerNameKey])
+}
+
+model Order {
+  id                String      @id @default(cuid())
+  number            Int         @unique @default(autoincrement())
+  userId            String?
+  sellerId          String?
+  eventId           String
+  source            OrderSource @default(ONLINE)
+  status            OrderStatus @default(PENDING)
+  totalCents        Int
+  buyerName         String
+  buyerEmail        String?
+  buyerPhone        String?
+  notes             String?
+  mpPreferenceId    String?
+  mpInitPoint       String?
+  mpPaymentId       String?
+  mpPaymentStatus   String?
+  paymentMethod     String?
+  paidAt            DateTime?
+  expiresAt         DateTime
+  cancelledReason   String?
+  needsAttention    Boolean     @default(false)
+  /// Formas aceitas no link do Mercado Pago: ALL (Pix e cartão), PIX ou CARD
+  payMethods        String      @default("ALL")
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  user     User?         @relation("OrderBuyer", fields: [userId], references: [id], onDelete: SetNull)
+  seller   User?         @relation("OrderSeller", fields: [sellerId], references: [id], onDelete: SetNull)
+  event    Event         @relation(fields: [eventId], references: [id])
+  items    OrderItem[]
+  messages WhatsAppMessage[]
+  events   PaymentEvent[]
+  links    PaymentLink[]
+
+  @@index([status, createdAt])
+  @@index([userId])
+  @@index([sellerId])
+  @@index([mpPaymentId])
+}
+
+model OrderItem {
+  id             String    @id @default(cuid())
+  orderId        String
+  productId      String
+  eventId        String
+  priceCents     Int
+  ownerName      String
+  ownerNameKey   String? // null = duplicidade de nome liberada por organizador
+  ownerCpfEnc    String
+  ownerCpfHash   String
+  ownerBirthDate DateTime  @db.Date
+  size           String
+  babyLook       Boolean   @default(false)
+  guardianName   String?
+  active         Boolean   @default(true) // false quando o pedido é cancelado/expirado (libera CPF e nome)
+  deliveredAt    DateTime?
+  deliveredById  String?
+  createdAt      DateTime  @default(now())
+
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product @relation(fields: [productId], references: [id])
+  event       Event   @relation(fields: [eventId], references: [id])
+  deliveredBy User?   @relation("ItemDeliveredBy", fields: [deliveredById], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([eventId, active])
+  // Índices únicos PARCIAIS (apenas itens ativos) são criados na migration SQL:
+  //   (eventId, ownerCpfHash)  WHERE active
+  //   (eventId, ownerNameKey)  WHERE active AND ownerNameKey IS NOT NULL
+}
+
+// ───────────────────────── Pagamentos / integrações ─────────────────────────
+
+model PaymentEvent {
+  id          String   @id @default(cuid())
+  mpPaymentId String
+  status      String?
+  orderId     String?
+  raw         Json
+  note        String?
+  createdAt   DateTime @default(now())
+  order       Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([mpPaymentId])
+}
+
+model PaymentLink {
+  id             String   @id @default(cuid())
+  title          String
+  description    String?
+  amountCents    Int
+  mpPreferenceId String?
+  url            String
+  active         Boolean  @default(true)
+  external       Boolean  @default(false) // true = link colado manualmente (criado direto no app do Mercado Pago)
+  orderId        String?
+  createdById    String?
+  expiresAt      DateTime?
+  createdAt      DateTime @default(now())
+  order          Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  createdBy      User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+}
+
+model WhatsAppMessage {
+  id            String        @id @default(cuid())
+  orderId       String?
+  kind          String // ORDER_CONFIRMATION | PASSWORD_RESET | PAYMENT_LINK | CUSTOM
+  phone         String
+  body          String
+  status        MessageStatus @default(QUEUED)
+  attempts      Int           @default(0)
+  lastError     String?
+  nextAttemptAt DateTime      @default(now())
+  sentAt        DateTime?
+  createdAt     DateTime      @default(now())
+  order         Order?        @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([status, nextAttemptAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actorName String?
+  action    String
+  entity    String?
+  entityId  String?
+  meta      Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entity, entityId])
+}
