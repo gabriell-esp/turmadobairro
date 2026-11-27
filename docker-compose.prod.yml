@@ -1,5 +1,9 @@
-# Produção: site + banco + HTTPS automático (Caddy).
+# Produção: site + banco (+ HTTPS automático com Caddy, OPCIONAL).
 #   docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+#
+# Dois jeitos de publicar:
+#  A) Nginx/proxy externo (padrão): o app fica na porta ${APP_PORT:-3400} e o seu proxy encaminha o domínio para ela.
+#  B) Sem proxy: suba também o Caddy (HTTPS automático nas portas 80/443):  docker compose --profile caddy up -d --build
 # Passo a passo completo em DEPLOY.md
 name: turmadobairro-prod
 
@@ -32,12 +36,15 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgresql://turma:${POSTGRES_PASSWORD}@db:5432/turmadobairro?schema=public
       UPLOAD_DIR: /app/storage/uploads
-      # Quantos proxies confiáveis ficam na frente do app: 1 = só o Caddy.
-      # Com Cloudflare na frente do Caddy use 2 (defina TRUSTED_PROXY_HOPS=2 no .env.production).
+      # Quantos proxies confiáveis ficam na frente do app: 1 = só o nginx (ou só o Caddy).
+      # Com Cloudflare na frente do nginx use 2 (defina TRUSTED_PROXY_HOPS=2 no .env.production).
       TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
     volumes:
       - uploads:/app/storage/uploads
-    # SEM "ports": só o Caddy conversa com o app
+    # Porta de entrada para o seu proxy (nginx). Restrinja no firewall ao IP do proxy (ufw allow from IP to any port 3400).
+    # Se o nginx roda NESTE servidor, use APP_BIND=127.0.0.1 no .env.production.
+    ports:
+      - "${APP_BIND:-0.0.0.0}:${APP_PORT:-3400}:3000"
     networks: [internal]
 
   # Tarefa agendada (a cada 5 min): concilia pagamentos, expira reservas, reenvia WhatsApp, limpa sessões.
@@ -52,8 +59,10 @@ services:
       - 'while true; do sleep 300; curl -fsS -m 55 -X POST -H "Authorization: Bearer $$CRON_SECRET" http://app:3000/api/cron || echo "[cron] falhou"; echo; done'
     networks: [internal]
 
+  # OPCIONAL (jeito B): só sobe com  --profile caddy
   caddy:
     image: caddy:2-alpine
+    profiles: ["caddy"]
     restart: unless-stopped
     depends_on: [app]
     ports:
@@ -61,7 +70,7 @@ services:
       - "443:443"
       - "443:443/udp"
     environment:
-      DOMAIN: ${DOMAIN:?defina DOMAIN no .env.production}
+      DOMAIN: ${DOMAIN:-localhost}
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

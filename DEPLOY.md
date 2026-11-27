@@ -57,6 +57,47 @@ docker compose --env-file .env.production -f docker-compose.prod.yml exec app np
 
 Agora **apague a linha `SEED_ADMIN_PASSWORD`** do `.env.production` e rode o `up -d` de novo. Abra `https://SEU-DOMINIO/entrar`.
 
+## 3b. Publicando atrás de um nginx (ou outro proxy) externo
+
+Por padrão o app responde na porta **3400** deste servidor (`APP_PORT` no `.env.production`; confira antes se está livre com `sudo ss -tulpn`)
+e o **Caddy não sobe**. Seu nginx encaminha o domínio para `http://IP-DO-SERVIDOR:3400`. O HTTPS fica no nginx.
+
+- `APP_URL=https://seudominio.com.br` (o endereço que o visitante digita).
+- `APP_BIND=0.0.0.0` se o nginx está em **outra máquina**; `APP_BIND=127.0.0.1` se está **neste** servidor.
+- **Firewall:** deixe a 3400 acessível **só para o IP do nginx** (`sudo ufw allow from IP-DO-NGINX to any port 3400 proto tcp`).
+  Quem acessar a 3400 direto consegue forjar o IP e burlar o limite de tentativas de login.
+
+Trecho do nginx (ajuste o IP e os certificados):
+
+```nginx
+server {
+    listen 80;
+    server_name seudominio.com.br;
+    return 301 https://$host$request_uri;
+}
+server {
+    listen 443 ssl http2;
+    server_name seudominio.com.br;
+    # ssl_certificate / ssl_certificate_key ...
+
+    client_max_body_size 30m;          # fotos de até 4 x 6 MB
+
+    location / {
+        proxy_pass http://IP-DO-SERVIDOR:3400;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_read_timeout 90s;
+    }
+}
+```
+
+Se houver **Cloudflare** na frente do nginx, ponha `TRUSTED_PROXY_HOPS=2` no `.env.production`.
+Para usar o Caddy no lugar do nginx (HTTPS automático, portas 80/443 livres): `docker compose --profile caddy up -d --build`.
+
 ## 4. Configurar pelo painel
 
 1. **Configurações › Mercado Pago:** cole o Access Token e a assinatura secreta; clique em **Testar conexão**.
