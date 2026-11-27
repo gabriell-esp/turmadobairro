@@ -6,19 +6,46 @@ const anton = Anton({ weight: "400", subsets: ["latin"], variable: "--font-anton
 const lobster = Lobster({ weight: "400", subsets: ["latin"], variable: "--font-lobster", display: "swap" });
 const nunito = Nunito_Sans({ subsets: ["latin"], variable: "--font-nunito", display: "swap" });
 
-const siteUrl = process.env.APP_URL ?? "http://localhost:3000";
+function siteBase(): URL {
+  try {
+    return new URL(process.env.APP_URL || "http://localhost:3000");
+  } catch {
+    return new URL("http://localhost:3000");
+  }
+}
+
+// Prévia do link (WhatsApp, Instagram, Facebook, Telegram…). Imagem 1200×630, ~190 KB.
+// Se trocar a foto, MUDE O NOME do arquivo (ex.: og-turma-do-bairro-2.jpg): os aplicativos guardam a prévia antiga em cache.
+const SHARE_TITLE = "Turma do Bairro — Kerbfest de Ipira/SC";
+const SHARE_DESCRIPTION = "Desde 2008, a alma do Kerbfest de Ipira. Garanta seu abadá e veja a programação do bloco.";
+const SHARE_IMAGE = {
+  url: "/og-turma-do-bairro.jpg",
+  width: 1200,
+  height: 630,
+  type: "image/jpeg",
+  alt: "Integrantes da Turma do Bairro com a camiseta azul do bloco no Kerbfest de Ipira",
+};
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  title: { default: "Turma do Bairro — Kerb de Ipira/SC desde 2008", template: "%s · Turma do Bairro" },
-  description:
-    "O bloco mais tradicional do Kerbfest de Ipira (SC). 18 anos de música, chope e alegria. Veja a programação, saiba como funciona e garanta seu abadá.",
+  metadataBase: siteBase(),
+  applicationName: "Turma do Bairro",
+  title: { default: SHARE_TITLE, template: "%s · Turma do Bairro" },
+  description: SHARE_DESCRIPTION,
+  alternates: { canonical: "/" },
   openGraph: {
-    title: "Turma do Bairro — Kerb de Ipira/SC",
-    description: "A alma do Kerbfest de Ipira. Garanta seu abadá e confira a programação do bloco.",
-    images: ["/logo.png"],
-    locale: "pt_BR",
     type: "website",
+    siteName: "Turma do Bairro",
+    url: "/",
+    title: SHARE_TITLE,
+    description: SHARE_DESCRIPTION,
+    images: [SHARE_IMAGE],
+    locale: "pt_BR",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SHARE_TITLE,
+    description: SHARE_DESCRIPTION,
+    images: [SHARE_IMAGE.url],
   },
 };
 
