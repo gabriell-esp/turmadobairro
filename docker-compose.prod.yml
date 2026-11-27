@@ -81,7 +81,9 @@ services:
   # Documentação: https://github.com/wppconnect-team/wppconnect-server
   # Rede interna: use WPP_BASE_URL=http://wppconnect:21465 no .env.production
   wppconnect:
-    image: wppconnect/wppconnect-server:latest
+    # Imagem oficial + sharp compilado na própria máquina (roda em VM com CPU virtual antiga). Veja deploy/wppconnect/Dockerfile.
+    build: ./deploy/wppconnect
+    image: turmadobairro-wppconnect:local
     profiles: ["whatsapp"]
     restart: unless-stopped
     environment:

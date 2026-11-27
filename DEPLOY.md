@@ -120,9 +120,9 @@ Use um **chip/número dedicado da Turma**. Ele fica só na rede interna do Docke
    WPP_SESSION=turmadobairro
    WPP_SECRET_KEY=uma-chave-longa-e-aleatoria
    ```
-2. Suba o servidor do WhatsApp e reinicie o app:
+2. Suba o servidor do WhatsApp (a primeira vez **compila** o sharp e leva uns 2 a 5 minutos) e reinicie o app:
    ```
-   docker compose --profile whatsapp up -d
+   docker compose --profile whatsapp up -d --build
    docker compose up -d app
    ```
 3. No painel, **WhatsApp › Iniciar sessão / gerar QR**. No celular do número: WhatsApp › Aparelhos conectados › Conectar um aparelho › escaneie o QR.
