@@ -18,7 +18,7 @@ import {
   findConflicts,
   type ItemInput,
 } from "@/lib/orders";
-import { BABY_LOOK_SIZES, cleanName, nameKey, onlyDigits, parseBirthDate } from "@/lib/validators";
+import { BABY_LOOK_SIZES, cleanName, nameKey, onlyDigits, parseBirthDate, resolveBuyerPhone } from "@/lib/validators";
 import { ageOn } from "@/lib/validators";
 import { ensureCheckoutUrl } from "@/lib/payments";
 import { recordConsent } from "@/lib/consent";
@@ -123,6 +123,8 @@ export async function removeCartItemAction(formData: FormData) {
 
 export type CheckoutState = {
   error?: string;
+  /** erro do campo de WhatsApp da finalização */
+  fieldErrors?: { phone?: string };
   /** erros por item da sacola (id do CartItem → mensagens) */
   itemErrors?: Record<string, string[]>;
 } | null;
@@ -134,7 +136,13 @@ export async function checkoutAction(_: CheckoutState, formData: FormData): Prom
 
   if (formData.get("accept") !== "on")
     return { error: "Confirme que leu os Termos e que tem autorização para informar os dados dos donos dos abadás." };
-  if (!user.phone) return { error: "Cadastre um WhatsApp válido na sua conta para receber a confirmação." };
+
+  // WhatsApp: usa o digitado na sacola; em branco, o da conta. Sem nenhum dos dois, pede ali mesmo.
+  const buyerPhone = resolveBuyerPhone(String(formData.get("phone") ?? ""), user.phone);
+  if (!buyerPhone.phone) return { fieldErrors: { phone: buyerPhone.error } };
+  const phone = buyerPhone.phone;
+  // Conta ainda sem WhatsApp (ex.: conta criada pela equipe): guarda para as próximas compras
+  if (!user.phone) await db.user.update({ where: { id: user.id }, data: { phone } });
 
   const settings = await getSettings();
   if (settings.sales_open === "false") return { error: "As vendas estão temporariamente fechadas." };
@@ -160,7 +168,7 @@ export async function checkoutAction(_: CheckoutState, formData: FormData): Prom
   try {
     const order = await createOrder({
       eventId,
-      buyer: { userId: user.id, name: user.name, email: user.email, phone: user.phone },
+      buyer: { userId: user.id, name: user.name, email: user.email, phone },
       source: "ONLINE",
       items,
     });

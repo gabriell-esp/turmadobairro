@@ -67,6 +67,19 @@ export function normalizePhone(input: string): string | null {
   return d;
 }
 
+/**
+ * WhatsApp do comprador na finalização: usa o que ele digitou; se deixar em branco, usa o da conta.
+ * Devolve o número normalizado (55 + DDD + número) ou a mensagem de erro para mostrar no campo.
+ */
+export function resolveBuyerPhone(typed: string, accountPhone: string | null | undefined): { phone: string | null; error?: string } {
+  const raw = typed.trim();
+  if (!raw) {
+    return accountPhone ? { phone: accountPhone } : { phone: null, error: "Informe seu WhatsApp para receber a confirmação." };
+  }
+  const phone = normalizePhone(raw);
+  return phone ? { phone } : { phone: null, error: "WhatsApp inválido. Use DDD + número, ex.: (49) 99999-9999." };
+}
+
 export function formatPhone(normalized: string | null | undefined): string {
   if (!normalized) return "";
   const n = normalized.startsWith("55") ? normalized.slice(2) : normalized;

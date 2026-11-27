@@ -1,7 +1,7 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { blindIndex, decrypt, encrypt, hashPassword, verifyPassword } from "@/lib/crypto";
-import { isMercadoPagoUrl, ageOn, formatCpf, isFullName, isValidCpf, maskCpf, nameKey, normalizePhone, parseBirthDate, validatePassword } from "@/lib/validators";
+import { isMercadoPagoUrl, resolveBuyerPhone, ageOn, formatCpf, isFullName, isValidCpf, maskCpf, nameKey, normalizePhone, parseBirthDate, validatePassword } from "@/lib/validators";
 import { parsePriceCents } from "@/lib/validators";
 import { isHexColor } from "@/components/shirt-art";
 import { excludedPaymentTypes, parsePayMethods, verifyWebhookSignature } from "@/lib/mercadopago";
@@ -52,6 +52,26 @@ describe("nome / telefone / datas", () => {
     expect(validatePassword("somenteletras")).not.toBeNull();
     expect(validatePassword("Senha12345")).not.toBeNull(); // senha comum
     expect(validatePassword("Bloco2027Kerb")).toBeNull();
+  });
+});
+
+describe("WhatsApp na finalização", () => {
+  it("usa o digitado, normalizado", () => {
+    expect(resolveBuyerPhone("(49) 99999-1234", null)).toEqual({ phone: "5549999991234" });
+    expect(resolveBuyerPhone("(49) 99999-1234", "5511988887777")).toEqual({ phone: "5549999991234" }); // troca só no pedido
+  });
+  it("em branco, usa o da conta", () => {
+    expect(resolveBuyerPhone("  ", "5549999991234")).toEqual({ phone: "5549999991234" });
+  });
+  it("sem número na conta e em branco, pede o número", () => {
+    const r = resolveBuyerPhone("", null);
+    expect(r.phone).toBeNull();
+    expect(r.error).toMatch(/Informe seu WhatsApp/);
+  });
+  it("recusa número inválido", () => {
+    const r = resolveBuyerPhone("123", "5549999991234"); // digitou errado: não cai no da conta
+    expect(r.phone).toBeNull();
+    expect(r.error).toMatch(/inválido/);
   });
 });
 

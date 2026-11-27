@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { checkoutAction, removeCartItemAction } from "@/app/actions/cart";
-import { SubmitButton } from "./client";
+import { MaskedInput, SubmitButton } from "./client";
 
 export type CartLine = {
   id: string;
@@ -17,7 +17,7 @@ export type CartLine = {
   minor: boolean;
 };
 
-export function CartView({ lines, totalLabel, holdMinutes }: { lines: CartLine[]; totalLabel: string; holdMinutes: number }) {
+export function CartView({ lines, totalLabel, holdMinutes, phone }: { lines: CartLine[]; totalLabel: string; holdMinutes: number; phone: string }) {
   const [state, action] = useActionState(checkoutAction, null);
 
   return (
@@ -75,6 +75,27 @@ export function CartView({ lines, totalLabel, holdMinutes }: { lines: CartLine[]
           </dl>
 
           {state?.error && <div role="alert" className="alert alert-error">{state.error}</div>}
+
+          <div className="field">
+            <label htmlFor="checkout-phone">WhatsApp para receber a confirmação</label>
+            <MaskedInput
+              mask="phone"
+              id="checkout-phone"
+              name="phone"
+              type="tel"
+              required
+              defaultValue={phone}
+              placeholder="(49) 99999-9999"
+              autoComplete="tel"
+              aria-invalid={!!state?.fieldErrors?.phone || undefined}
+              aria-describedby="checkout-phone-hint"
+              className="input"
+            />
+            {state?.fieldErrors?.phone && <p role="alert" className="error-text">{state.fieldErrors.phone}</p>}
+            <p id="checkout-phone-hint" className="mt-1 text-xs text-muted">
+              {phone ? "Usamos o WhatsApp do seu cadastro. Pode trocar só para este pedido." : "Vamos guardar no seu cadastro para as próximas compras."}
+            </p>
+          </div>
 
           <label className="flex items-start gap-3 text-sm">
             <input type="checkbox" name="accept" required className="mt-1 h-5 w-5 shrink-0 accent-red" />

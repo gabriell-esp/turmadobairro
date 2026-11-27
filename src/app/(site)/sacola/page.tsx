@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { decrypt } from "@/lib/crypto";
 import { brl, fmtBirth } from "@/lib/format";
-import { ageOn, maskCpf, onlyDigits } from "@/lib/validators";
+import { ageOn, formatPhone, maskCpf, onlyDigits } from "@/lib/validators";
 import { HOLD_MINUTES } from "@/lib/orders";
 import { PageHero } from "@/components/page-shell";
 import { CartView } from "@/components/cart-view";
@@ -36,6 +36,7 @@ export default async function SacolaPage({ searchParams }: { searchParams: Promi
         ) : (
           <CartView
             holdMinutes={HOLD_MINUTES}
+            phone={formatPhone(user.phone)}
             totalLabel={brl(total)}
             lines={items.map((i) => ({
               id: i.id,
