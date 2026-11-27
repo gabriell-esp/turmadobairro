@@ -105,9 +105,30 @@ Para usar o Caddy no lugar do nginx (HTTPS automático, portas 80/443 livres): `
 2. **Evento e programação:** datas reais do Kerb, local e texto de retirada. **Produtos:** preços, lotes, estoque, foto/cor do abadá.
 3. **Configurações:** nome, WhatsApp e e-mail de atendimento, encarregado de dados (LGPD).
 4. **Equipe:** crie uma conta para cada vendedor (senha de 8+ caracteres). Não compartilhe a conta do organizador.
-5. **WhatsApp:** com o servidor WPPConnect no ar (`--profile whatsapp` ou outro host), conecte o número pelo QR Code.
+5. **WhatsApp:** veja a seção 4b abaixo (servidor WPPConnect + QR Code).
 6. Faça **uma compra de teste real de valor baixo** (ex.: R$ 1,00 num produto de teste que você apaga depois), confira o pagamento, a confirmação e a retirada.
 7. Só então **libere as vendas** na Visão geral (o sistema pode ficar congelado até lá).
+
+## 4b. WhatsApp (WPPConnect)
+
+O WPPConnect é o programa que "liga" um número de WhatsApp ao site (confirmações de pedido, link de pagamento, recuperação de senha).
+Use um **chip/número dedicado da Turma**. Ele fica só na rede interna do Docker (sem porta aberta para a internet).
+
+1. No `.env.production` preencha (a chave você inventa; `node deploy/gen-secrets.mjs` gera uma):
+   ```
+   WPP_BASE_URL=http://wppconnect:21465
+   WPP_SESSION=turmadobairro
+   WPP_SECRET_KEY=uma-chave-longa-e-aleatoria
+   ```
+2. Suba o servidor do WhatsApp e reinicie o app:
+   ```
+   docker compose --profile whatsapp up -d
+   docker compose up -d app
+   ```
+3. No painel, **WhatsApp › Iniciar sessão / gerar QR**. No celular do número: WhatsApp › Aparelhos conectados › Conectar um aparelho › escaneie o QR.
+4. Quando o estado ficar **CONNECTED**, envie uma **mensagem de teste** para o seu número.
+
+Se o estado ficar em erro: `docker compose logs --tail 50 wppconnect`. Se o QR não aparecer, clique em *Atualizar* após alguns segundos.
 
 ## 5. Rotina
 

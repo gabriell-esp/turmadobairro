@@ -81,9 +81,13 @@ services:
   # Documentação: https://github.com/wppconnect-team/wppconnect-server
   # Rede interna: use WPP_BASE_URL=http://wppconnect:21465 no .env.production
   wppconnect:
-    image: wppconnect/server-cli:latest
+    image: wppconnect/wppconnect-server:latest
     profiles: ["whatsapp"]
     restart: unless-stopped
+    environment:
+      # Mesma chave do WPP_SECRET_KEY do .env.production (o app usa ela para gerar o token de acesso).
+      # (sem ":?" de propósito: quem não usa WhatsApp não precisa definir.)
+      SECRET_KEY: ${WPP_SECRET_KEY:-}
     volumes:
       - wppdata:/usr/src/wpp-server/userDataDir
       - wpptokens:/usr/src/wpp-server/tokens

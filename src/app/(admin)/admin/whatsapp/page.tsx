@@ -31,7 +31,7 @@ export default async function WhatsAppPage({ searchParams }: { searchParams: Pro
       <div className="mb-6 grid gap-6 lg:grid-cols-2">
         <Panel title="Conexão">
           <p className="mb-3 flex items-center gap-2">Estado: <span className={`badge ${status.connected ? "badge-green" : status.configured ? "badge-yellow" : "badge-red"}`}>{status.configured ? status.state : "NÃO CONFIGURADO"}</span></p>
-          {!status.configured && <p className="text-sm text-muted">Defina WPP_BASE_URL, WPP_SESSION e WPP_SECRET_KEY no .env (veja o README) e reinicie.</p>}
+          {!status.configured && <p className="text-sm text-muted">Defina WPP_BASE_URL, WPP_SESSION e WPP_SECRET_KEY no .env.production do servidor (passo a passo no DEPLOY.md, seção WhatsApp) e reinicie o app.</p>}
           {status.error && <p className="alert alert-error mb-3 text-sm">{status.error}</p>}
           {status.qrcode && !status.connected && (
             <div className="mb-3">
