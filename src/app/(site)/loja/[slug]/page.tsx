@@ -32,7 +32,7 @@ export default async function ProdutoPage({ params }: { params: Promise<{ slug: 
         <Link href="/loja" className="text-blue underline">Abadás</Link> <span aria-hidden>›</span> {p.name}
       </nav>
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
-        <div className="card h-fit overflow-hidden lg:sticky lg:top-40">
+        <div className="card h-fit overflow-hidden lg:sticky lg:top-36">
           <div className="bg-rauten grid place-items-center border-b-2 border-ink p-8">
             {p.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element

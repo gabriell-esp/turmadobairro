@@ -58,6 +58,18 @@ body {
   background-repeat: repeat-x;
   background-size: 240px 38px;
 }
+/* No celular o festão fica mais baixo (sobra mais tela para o conteúdo). */
+@media (max-width: 639px) {
+  .bunting { height: 22px; background-size: 139px 22px; }
+}
+
+/* Gaveta do menu (celular) */
+@keyframes drawer-in-right { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes drawer-in-left { from { transform: translateX(-100%); } to { transform: none; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.drawer-right { animation: drawer-in-right .22s ease-out; }
+.drawer-left { animation: drawer-in-left .22s ease-out; }
+.drawer-backdrop { animation: fade-in .2s ease-out; }
 
 /* Texto "estilo logo": branco com contorno escuro */
 .outlined {

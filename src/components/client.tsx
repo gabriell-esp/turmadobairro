@@ -116,9 +116,9 @@ export function CookieBanner() {
   }, []);
   if (!show) return null;
   return (
-    <div role="dialog" aria-label="Aviso de cookies" className="fixed inset-x-0 bottom-0 z-50 p-3 sm:p-4">
-      <div className="card mx-auto flex max-w-3xl flex-col gap-3 p-4 sm:flex-row sm:items-center">
-        <p className="text-sm leading-snug text-ink/90">
+    <div role="dialog" aria-label="Aviso de cookies" className="fixed inset-x-0 bottom-0 z-50 p-2 sm:p-4" style={{ paddingBottom: "max(.5rem, env(safe-area-inset-bottom))" }}>
+      <div className="card mx-auto flex max-w-3xl flex-col gap-2 !shadow-[3px_3px_0_var(--color-ink)] p-3 sm:flex-row sm:items-center sm:gap-3 sm:!shadow-[6px_6px_0_var(--color-ink)] sm:p-4">
+        <p className="text-[.8rem] leading-snug text-ink/90 sm:text-sm">
           Usamos apenas <strong>cookies essenciais</strong> (para manter você conectado e a sacola funcionando). Não usamos
           cookies de publicidade nem rastreamento. Saiba mais na{" "}
           <a className="font-bold text-blue underline" href="/cookies">

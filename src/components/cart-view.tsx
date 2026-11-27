@@ -26,9 +26,9 @@ export function CartView({ lines, totalLabel, holdMinutes, phone }: { lines: Car
         {lines.map((l, i) => {
           const errs = state?.itemErrors?.[l.id];
           return (
-            <li key={l.id} className={`card p-5 ${errs ? "!border-red" : ""}`}>
-              <div className="flex items-start justify-between gap-4">
-                <div>
+            <li key={l.id} className={`card p-4 sm:p-5 ${errs ? "!border-red" : ""}`}>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                <div className="min-w-0">
                   <p className="text-xs font-extrabold uppercase tracking-widest text-muted">Abadá {i + 1}</p>
                   <p className="h-display text-2xl text-navy">{l.productName}</p>
                   <p className="mt-1 text-lg font-extrabold">{l.ownerName}</p>
@@ -41,11 +41,11 @@ export function CartView({ lines, totalLabel, holdMinutes, phone }: { lines: Car
                     {l.minor && <span className="badge badge-yellow">Menor de idade</span>}
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="flex items-center justify-between gap-3 border-t-2 border-ink/10 pt-3 sm:block sm:border-t-0 sm:pt-0 sm:text-right">
                   <p className="h-display text-2xl text-red">{l.priceLabel}</p>
                   <form action={removeCartItemAction}>
                     <input type="hidden" name="id" value={l.id} />
-                    <button className="mt-2 text-sm font-bold text-red-dark underline" aria-label={`Remover abadá de ${l.ownerName}`}>
+                    <button className="inline-flex min-h-11 items-center px-1 text-sm font-bold text-red-dark underline sm:mt-1 sm:min-h-0" aria-label={`Remover abadá de ${l.ownerName}`}>
                       Remover
                     </button>
                   </form>
@@ -66,8 +66,8 @@ export function CartView({ lines, totalLabel, holdMinutes, phone }: { lines: Car
         </li>
       </ul>
 
-      <aside className="h-fit lg:sticky lg:top-40">
-        <form action={action} className="card space-y-4 p-6">
+      <aside className="h-fit lg:sticky lg:top-36">
+        <form action={action} className="card space-y-4 p-5 sm:p-6">
           <h2 className="h-display text-3xl text-navy">Resumo</h2>
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between"><dt>{lines.length} {lines.length === 1 ? "abadá" : "abadás"}</dt><dd className="font-bold">{totalLabel}</dd></div>
